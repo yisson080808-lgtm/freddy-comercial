@@ -9,7 +9,7 @@ import {
   uploadProductImage,
   upsertProduct,
   watchAuthState,
-} from "./firebase.js?v=20260425-6";
+} from "./firebase.js?v=20260504-2";
 import { demoProducts } from "./demo-products.js";
 
 const authPanel = document.querySelector(".auth-panel");
@@ -91,6 +91,7 @@ productForm?.addEventListener("submit", async (event) => {
       stock: 9999,
       category: document.querySelector("#product-category").value.trim(),
       description: document.querySelector("#product-description").value.trim(),
+      sizes: parseSizes(document.querySelector("#product-sizes").value),
       imageUrl,
       storeName: settings.storeName,
     });
@@ -148,6 +149,7 @@ function renderAdminProducts() {
       <img src="${product.imageUrl || fallbackImage(product.name)}" alt="${product.name}" />
       <h3>${product.name}</h3>
       <p class="admin-item-meta">${product.category}</p>
+      ${product.sizes?.length ? `<p class="helper-text">Tallas: ${product.sizes.join(", ")}</p>` : ""}
       <p>${product.description}</p>
       <strong>${formatCurrency(product.price)}</strong>
       <div class="admin-item-actions">
@@ -179,8 +181,16 @@ function populateForm(product) {
   document.querySelector("#product-price").value = product.price;
   document.querySelector("#product-category").value = product.category;
   document.querySelector("#product-description").value = product.description;
+  document.querySelector("#product-sizes").value = (product.sizes || []).join(", ");
   document.querySelector("#product-image-url").value = product.imageUrl || "";
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function parseSizes(value) {
+  return String(value || "")
+    .split(",")
+    .map((size) => size.trim())
+    .filter(Boolean);
 }
 
 function formatCurrency(value) {

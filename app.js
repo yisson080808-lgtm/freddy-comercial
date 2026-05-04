@@ -8,13 +8,14 @@ import {
   settings,
   subscribeToProducts,
   watchAuthState,
-} from "./firebase.js?v=20260503-3";
+} from "./firebase.js?v=20260504-3";
 
 const state = {
   products: [],
   cart: loadCart(),
   customer: null,
   selectedQuantities: {},
+  selectedSizes: {},
   filters: {
     search: "",
     category: "all",
@@ -39,6 +40,7 @@ const elements = {
   cartSubtotal: document.querySelector("#cart-subtotal"),
   cartItemsCount: document.querySelector("#cart-items-count"),
   checkoutForm: document.querySelector("#checkout-form"),
+  locationStatus: document.querySelector("#location-status"),
   toast: document.querySelector("#toast"),
   accountStatus: document.querySelector("#account-status"),
 };
@@ -49,6 +51,9 @@ document.querySelector("#open-cart-btn")?.addEventListener("click", openCart);
 document.querySelector("#account-btn")?.addEventListener("click", openAccount);
 document.querySelector("#close-cart-btn")?.addEventListener("click", closeCart);
 document.querySelector("#close-account-btn")?.addEventListener("click", closeAccount);
+document
+  .querySelector("#use-location-btn")
+  ?.addEventListener("click", requestCustomerLocation);
 document
   .querySelector("#close-image-viewer-btn")
   ?.addEventListener("click", closeImageViewer);
@@ -98,6 +103,16 @@ elements.catalogGrid?.addEventListener("click", (event) => {
       quantityButton.dataset.action === "increase-card" ? 1 : -1;
     state.selectedQuantities[productId] = Math.max(1, currentQuantity + delta);
     updateCardQuantity(productId);
+    return;
+  }
+
+  const sizeSelect = event.target.closest(".size-select");
+  if (sizeSelect) {
+    const card = sizeSelect.closest(".product-card");
+    const productId = card?.dataset.productId;
+    if (productId) {
+      state.selectedSizes[productId] = sizeSelect.value;
+    }
     return;
   }
 
@@ -244,6 +259,8 @@ function renderProducts() {
     const price = fragment.querySelector(".product-price");
     const button = fragment.querySelector(".add-to-cart-btn");
     const quantity = fragment.querySelector(".card-quantity");
+    const sizeSelectWrap = fragment.querySelector(".size-select-wrap");
+    const sizeSelect = fragment.querySelector(".size-select");
 
     card.dataset.productId = product.id;
     image.src = safeImageUrl(product.imageUrl, product.name);
@@ -259,6 +276,7 @@ function renderProducts() {
     button.dataset.productId = product.id;
     zoomButton.setAttribute("aria-label", `Ver imagen de ${product.name}`);
     quantity.textContent = String(state.selectedQuantities[product.id] || 1);
+    renderSizeSelector(product, sizeSelectWrap, sizeSelect);
 
     elements.catalogGrid.appendChild(fragment);
   });
@@ -298,15 +316,19 @@ function addToCart(productId) {
     return;
   }
 
-  const existingItem = state.cart.find((item) => item.id === productId);
+  const selectedSize = getSelectedSize(product);
+  const cartKey = buildCartKey(product.id, selectedSize);
+  const existingItem = state.cart.find((item) => item.cartKey === cartKey);
   const selectedQuantity = state.selectedQuantities[productId] || 1;
 
   if (existingItem) {
     existingItem.quantity += selectedQuantity;
   } else {
     state.cart.push({
+      cartKey,
       id: product.id,
       name: product.name,
+      size: selectedSize,
       price: Number(product.price) || 0,
       quantity: selectedQuantity,
     });
@@ -317,8 +339,8 @@ function addToCart(productId) {
   showToast("Anadido al carrito");
 }
 
-function updateQuantity(productId, delta) {
-  const item = state.cart.find((entry) => entry.id === productId);
+function updateQuantity(cartKey, delta) {
+  const item = state.cart.find((entry) => entry.cartKey === cartKey);
   if (!item) {
     return;
   }
@@ -329,8 +351,8 @@ function updateQuantity(productId, delta) {
   renderCart();
 }
 
-function removeFromCart(productId) {
-  state.cart = state.cart.filter((item) => item.id !== productId);
+function removeFromCart(cartKey) {
+  state.cart = state.cart.filter((item) => item.cartKey !== cartKey);
   persistCart();
   renderCart();
 }
@@ -351,6 +373,7 @@ function renderCart() {
         <img src="${imageUrl}" alt="${item.name}" />
         <div>
           <strong>${item.name}</strong>
+          ${item.size ? `<div class="helper-text">Talla: ${item.size}</div>` : ""}
           <div class="helper-text">${formatCurrency(item.price)}</div>
           <div class="cart-item-controls">
             <button class="mini-button" type="button" data-action="decrease">-</button>
@@ -364,13 +387,13 @@ function renderCart() {
 
       cartItem
         .querySelector('[data-action="decrease"]')
-        ?.addEventListener("click", () => updateQuantity(item.id, -1));
+        ?.addEventListener("click", () => updateQuantity(item.cartKey, -1));
       cartItem
         .querySelector('[data-action="increase"]')
-        ?.addEventListener("click", () => updateQuantity(item.id, 1));
+        ?.addEventListener("click", () => updateQuantity(item.cartKey, 1));
       cartItem
         .querySelector('[data-action="remove"]')
-        ?.addEventListener("click", () => removeFromCart(item.id));
+        ?.addEventListener("click", () => removeFromCart(item.cartKey));
 
       elements.cartItems.appendChild(cartItem);
     });
@@ -395,6 +418,12 @@ async function checkoutOnWhatsApp() {
   const customerPhone = document.querySelector("#customer-phone").value.trim();
   const customerAddress = document.querySelector("#customer-address").value.trim();
   const businessName = document.querySelector("#business-name").value.trim();
+  const customerLatitude = document.querySelector("#customer-latitude").value.trim();
+  const customerLongitude = document.querySelector("#customer-longitude").value.trim();
+  const customerLocationUrl =
+    customerLatitude && customerLongitude
+      ? `https://maps.google.com/?q=${customerLatitude},${customerLongitude}`
+      : "";
 
   if (!businessName || !customerName || !customerPhone || !customerAddress) {
     alert("Completa nombre del negocio, nombre, telefono y direccion.");
@@ -409,12 +438,16 @@ async function checkoutOnWhatsApp() {
       customerName,
       customerPhone,
       customerAddress,
+      customerLatitude,
+      customerLongitude,
+      customerLocationUrl,
       storeName: settings.storeName,
       total: cartTotal(),
       currency: settings.currency,
       items: state.cart.map((item) => ({
         id: item.id,
         name: item.name,
+        size: item.size || "",
         price: item.price,
         quantity: item.quantity,
         lineTotal: item.price * item.quantity,
@@ -429,11 +462,17 @@ async function checkoutOnWhatsApp() {
       `Cliente: ${customerName}`,
       `Telefono del cliente: ${customerPhone}`,
       `Direccion: ${customerAddress}`,
+      ...(customerLatitude && customerLongitude
+        ? [
+            `Ubicacion GPS: ${customerLatitude}, ${customerLongitude}`,
+            `Mapa: ${customerLocationUrl}`,
+          ]
+        : []),
       "",
       "Productos:",
       ...state.cart.map(
         (item) =>
-          `- ${item.name} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
+          `- ${item.name}${item.size ? ` | Talla: ${item.size}` : ""} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
       ),
       "",
       `Total: ${formatCurrency(cartTotal())}`,
@@ -472,6 +511,37 @@ function openCart() {
   elements.cartPanel.classList.add("is-open");
   elements.cartPanel.setAttribute("aria-hidden", "false");
   document.body.classList.add("cart-open");
+}
+
+function requestCustomerLocation() {
+  if (!("geolocation" in navigator)) {
+    elements.locationStatus.textContent =
+      "Tu navegador no permite compartir ubicacion.";
+    return;
+  }
+
+  elements.locationStatus.textContent = "Obteniendo ubicacion...";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const latitude = position.coords.latitude.toFixed(6);
+      const longitude = position.coords.longitude.toFixed(6);
+
+      document.querySelector("#customer-latitude").value = latitude;
+      document.querySelector("#customer-longitude").value = longitude;
+      elements.locationStatus.textContent =
+        `Ubicacion lista: ${latitude}, ${longitude}`;
+      showToast("Ubicacion agregada");
+    },
+    (error) => {
+      elements.locationStatus.textContent = friendlyLocationError(error);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 0,
+    },
+  );
 }
 
 function openImageViewer(product) {
@@ -554,8 +624,10 @@ function syncRegisterFormWithCheckout() {
 function persistCart() {
   try {
     const lightCart = state.cart.map((item) => ({
+      cartKey: item.cartKey,
       id: item.id,
       name: item.name,
+      size: item.size || "",
       price: item.price,
       quantity: item.quantity,
     }));
@@ -568,8 +640,10 @@ function persistCart() {
 function loadCart() {
   try {
     return (JSON.parse(localStorage.getItem("fc-cart")) || []).map((item) => ({
+      cartKey: String(item.cartKey || buildCartKey(item.id, item.size || "")),
       id: String(item.id),
       name: String(item.name || "Producto"),
+      size: String(item.size || ""),
       price: Number(item.price) || 0,
       quantity: Math.max(1, Number(item.quantity) || 1),
     }));
@@ -588,11 +662,15 @@ function syncCartWithProducts() {
         return null;
       }
 
+      const validSize = keepValidSize(product, item.size);
+
       return {
         ...item,
+        cartKey: buildCartKey(item.id, validSize),
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl || fallbackImage(product.name),
+        size: validSize,
         quantity: Math.max(1, Number(item.quantity) || 1),
       };
     })
@@ -647,6 +725,44 @@ function applyProfileValues(profile) {
   document.querySelector("#customer-address").value = profile.customerAddress || "";
 }
 
+function renderSizeSelector(product, wrap, select) {
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  if (!wrap || !select) {
+    return;
+  }
+
+  if (!sizes.length) {
+    wrap.classList.add("hidden");
+    select.innerHTML = "";
+    return;
+  }
+
+  wrap.classList.remove("hidden");
+  select.innerHTML = "";
+
+  sizes.forEach((size) => {
+    const option = document.createElement("option");
+    option.value = size;
+    option.textContent = size;
+    select.appendChild(option);
+  });
+
+  const selected = state.selectedSizes[product.id];
+  const activeSize = sizes.includes(selected) ? selected : sizes[0];
+  state.selectedSizes[product.id] = activeSize;
+  select.value = activeSize;
+}
+
+function getSelectedSize(product) {
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  if (!sizes.length) {
+    return "";
+  }
+
+  const selected = state.selectedSizes[product.id];
+  return sizes.includes(selected) ? selected : sizes[0];
+}
+
 function updateCardQuantity(productId) {
   const card = elements.catalogGrid?.querySelector(
     `.product-card[data-product-id="${CSS.escape(productId)}"]`,
@@ -667,7 +783,38 @@ function normalizeProduct(product) {
     price: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
     imageUrl: typeof product.imageUrl === "string" ? product.imageUrl.trim() : "",
+    sizes: normalizeSizes(product.sizes),
   };
+}
+
+function normalizeSizes(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((size) => String(size).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((size) => size.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
+function keepValidSize(product, currentSize) {
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  if (!sizes.length) {
+    return "";
+  }
+
+  return sizes.includes(currentSize) ? currentSize : sizes[0];
+}
+
+function buildCartKey(productId, size) {
+  return `${String(productId)}::${String(size || "standard")}`;
 }
 
 function safeImageUrl(value, label) {
@@ -714,6 +861,20 @@ function friendlyAuthError(error) {
     return "Correo invalido.";
   }
   return error?.message || "No se pudo completar la accion.";
+}
+
+function friendlyLocationError(error) {
+  const code = error?.code;
+  if (code === 1) {
+    return "Debes permitir la ubicacion para enviar la coordenada.";
+  }
+  if (code === 2) {
+    return "No se pudo detectar tu ubicacion.";
+  }
+  if (code === 3) {
+    return "La solicitud de ubicacion tardo demasiado.";
+  }
+  return "No se pudo obtener la ubicacion.";
 }
 
 function fallbackImage(label) {

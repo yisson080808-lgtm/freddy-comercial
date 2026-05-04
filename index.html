@@ -23,7 +23,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260504-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260504-3" />
   </head>
   <body data-page="store">
     <div class="page-shell">
@@ -144,6 +144,10 @@
                   <strong class="product-price"></strong>
                 </div>
                 <div class="purchase-controls">
+                  <label class="size-select-wrap hidden">
+                    <span>Talla</span>
+                    <select class="size-select"></select>
+                  </label>
                   <div class="quantity-picker">
                     <button class="mini-button quantity-btn" data-action="decrease-card" type="button">-</button>
                     <span class="card-quantity">1</span>
@@ -341,6 +345,15 @@
             <textarea id="customer-address" rows="3" required></textarea>
           </label>
 
+          <button id="use-location-btn" class="secondary-button full-width" type="button">
+            Usar mi ubicacion
+          </button>
+          <input id="customer-latitude" type="hidden" />
+          <input id="customer-longitude" type="hidden" />
+          <p id="location-status" class="helper-text">
+            Puedes enviar tu ubicacion actual para que la factura incluya la coordenada.
+          </p>
+
           <button id="checkout-btn" class="primary-button full-width" type="submit">
             Facturar
           </button>
@@ -348,6 +361,6 @@
       </div>
     </aside>
 
-    <script type="module" src="./app.js?v=20260504-1"></script>
+    <script type="module" src="./app.js?v=20260504-3"></script>
   </body>
 </html>
