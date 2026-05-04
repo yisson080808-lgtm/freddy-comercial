@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Freddy Comercial | Administrador</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260425-6" />
+  </head>
+  <body data-page="admin">
+    <div class="page-shell admin-shell">
+      <header class="admin-hero">
+        <div class="brand">
+          <span class="brand-mark">FC</span>
+          <span>
+            <strong>Panel de administrador</strong>
+            <small>Gestiona catalogo y precios</small>
+          </span>
+        </div>
+      </header>
+
+      <main class="admin-layout">
+        <section class="glass-panel auth-panel">
+          <p class="section-label">Acceso</p>
+          <h1>Iniciar sesion</h1>
+          <form id="login-form" class="stack-form" onsubmit="event.preventDefault(); return false;">
+            <label class="input-wrap">
+              <span>Correo</span>
+              <input id="admin-email" type="email" required />
+            </label>
+            <label class="input-wrap">
+              <span>Contrasena</span>
+              <input id="admin-password" type="password" required />
+            </label>
+            <button id="login-btn" class="primary-button full-width" type="button">
+              Entrar al panel
+            </button>
+          </form>
+          <p id="auth-status" class="helper-text">
+            Usa un usuario creado en Firebase Authentication.
+          </p>
+          <p id="security-note" class="helper-text">
+            Por seguridad, el panel solo se habilita con Firebase Authentication real.
+          </p>
+        </section>
+
+        <section class="glass-panel admin-panel hidden" id="admin-panel">
+          <div class="admin-panel-header">
+            <div>
+              <p class="section-label">Inventario</p>
+              <h2>Subir mercancia</h2>
+            </div>
+            <button id="logout-btn" class="secondary-button" type="button">
+              Cerrar sesion
+            </button>
+          </div>
+
+          <form id="product-form" class="product-form">
+            <input id="product-id" type="hidden" />
+
+            <label class="input-wrap">
+              <span>Nombre del producto</span>
+              <input id="product-name" type="text" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Precio</span>
+              <input id="product-price" type="number" min="0" step="0.01" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Categoria</span>
+              <input id="product-category" type="text" placeholder="Tecnologia, Hogar..." required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Descripcion</span>
+              <textarea id="product-description" rows="4" required></textarea>
+            </label>
+
+            <label class="input-wrap">
+              <span>Imagen del producto</span>
+              <input id="product-image" type="file" accept="image/*" />
+            </label>
+
+            <label class="input-wrap">
+              <span>URL de imagen alternativa</span>
+              <input
+                id="product-image-url"
+                type="url"
+                placeholder="https://..."
+              />
+            </label>
+
+            <button class="primary-button full-width" type="submit">
+              Guardar producto
+            </button>
+          </form>
+
+          <div class="admin-products">
+            <div class="admin-products-header">
+              <h3>Productos cargados</h3>
+              <button id="seed-btn" class="secondary-button" type="button">
+                Insertar demo
+              </button>
+            </div>
+            <div id="admin-products-list" class="admin-products-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./admin.js?v=20260425-6"></script>
+  </body>
+</html>

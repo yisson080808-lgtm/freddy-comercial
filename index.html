@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Freddy Comercial | Tienda</title>
+    <meta
+      name="description"
+      content="Tienda online futurista con carrito, total en tiempo real y pedidos por WhatsApp."
+    />
+    <meta name="theme-color" content="#081220" />
+    <meta property="og:title" content="Freddy Comercial" />
+    <meta
+      property="og:description"
+      content="Compra productos, agrégalos al carrito y recibe tu factura por WhatsApp."
+    />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="manifest" href="./site.webmanifest" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=20260503-1" />
+  </head>
+  <body data-page="store">
+    <div class="page-shell">
+      <header class="hero">
+        <nav class="topbar">
+          <a class="brand" href="./index.html">
+            <span class="brand-mark">FC</span>
+            <span>
+              <strong>Freddy Comercial</strong>
+            </span>
+          </a>
+
+          <div class="topbar-actions">
+            <button id="account-btn" class="secondary-button" type="button">
+              Mi cuenta
+            </button>
+            <button id="open-cart-btn" class="chip-button" type="button">
+              Carrito
+              <span id="cart-count" class="chip-badge">0</span>
+            </button>
+          </div>
+        </nav>
+
+        <section class="hero-content">
+          <div class="hero-copy">
+            <p class="eyebrow">Compra rapido. Pide por WhatsApp.</p>
+            <p class="hero-text">
+              Explora productos, agrega al carrito, revisa tu total en tiempo
+              real y finaliza el pedido con una factura lista para enviar.
+            </p>
+            <div class="hero-actions">
+              <a class="primary-button" href="#productos">Ver productos</a>
+            </div>
+          </div>
+
+          <div class="hero-card glass-panel">
+            <div class="status-pill" id="connection-status">
+              <span class="status-dot"></span>
+            </div>
+            <div class="hero-metrics">
+              <article>
+                <strong id="hero-product-count">0</strong>
+                <span>Productos visibles</span>
+              </article>
+              <article>
+                <strong>24/7</strong>
+                <span>Pedidos automatizados</span>
+              </article>
+              <article>
+                <strong>WA</strong>
+                <span>Factura por WhatsApp</span>
+              </article>
+            </div>
+            <div class="mini-cart-preview">
+              <span>Total actual</span>
+              <strong id="hero-cart-total">$0.00</strong>
+            </div>
+          </div>
+        </section>
+      </header>
+
+      <main class="content">
+        <section class="filters glass-panel">
+          <div>
+            <p class="section-label">Catalogo</p>
+            <h2 id="productos">Productos destacados</h2>
+          </div>
+
+          <div class="filter-grid">
+            <label class="input-wrap">
+              <span>Buscar</span>
+              <input
+                id="search-input"
+                type="search"
+                placeholder="Ej: laptop, auriculares, smartwatch"
+              />
+            </label>
+
+            <label class="input-wrap">
+              <span>Categoria</span>
+              <select id="category-filter">
+                <option value="all">Todas</option>
+              </select>
+            </label>
+          </div>
+        </section>
+
+        <section id="catalog-grid" class="catalog-grid"></section>
+
+        <template id="product-card-template">
+          <article class="product-card glass-panel">
+            <div class="product-image-wrap">
+              <img class="product-image" alt="" />
+              <button class="image-zoom-button" type="button">
+                Ver imagen
+              </button>
+              <span class="product-category"></span>
+            </div>
+            <div class="product-body">
+              <h3 class="product-title"></h3>
+              <p class="product-description"></p>
+              <div class="product-footer">
+                <div>
+                  <strong class="product-price"></strong>
+                </div>
+                <div class="purchase-controls">
+                  <div class="quantity-picker">
+                    <button class="mini-button quantity-btn" data-action="decrease-card" type="button">-</button>
+                    <span class="card-quantity">1</span>
+                    <button class="mini-button quantity-btn" data-action="increase-card" type="button">+</button>
+                  </div>
+                  <button class="primary-button add-to-cart-btn" type="button">
+                    Anadir al carrito
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+        </template>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite" aria-hidden="true"></div>
+
+    <div id="image-viewer" class="image-viewer" aria-hidden="true">
+      <button
+        id="close-image-viewer-btn"
+        class="image-viewer-backdrop"
+        type="button"
+        aria-label="Cerrar imagen ampliada"
+      ></button>
+      <div class="image-viewer-dialog glass-panel" role="dialog" aria-modal="true" aria-labelledby="image-viewer-title">
+        <div class="image-viewer-header">
+          <div>
+            <p class="section-label">Vista ampliada</p>
+            <h2 id="image-viewer-title">Producto</h2>
+          </div>
+          <button id="close-image-viewer-icon" class="icon-button" type="button">
+            X
+          </button>
+        </div>
+        <div class="image-viewer-media">
+          <img id="image-viewer-img" alt="" />
+        </div>
+      </div>
+    </div>
+
+    <aside id="account-panel" class="account-panel" aria-hidden="true">
+      <div class="cart-backdrop" data-close-account="true"></div>
+      <div class="account-drawer glass-panel">
+        <div class="cart-header">
+          <div>
+            <p class="section-label">Cuenta</p>
+            <h2 id="account-title">Iniciar sesion</h2>
+          </div>
+          <button id="close-account-btn" class="icon-button" type="button">
+            X
+          </button>
+        </div>
+
+        <div id="account-guest-view">
+          <div class="account-tabs">
+            <button id="show-login-btn" class="secondary-button full-width" type="button">
+              Entrar
+            </button>
+            <button id="show-register-btn" class="secondary-button full-width" type="button">
+              Registrarse
+            </button>
+          </div>
+
+          <form id="login-customer-form" class="checkout-form">
+            <label class="input-wrap">
+              <span>Correo</span>
+              <input id="login-email" type="email" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Contrasena</span>
+              <input id="login-password" type="password" required />
+            </label>
+
+            <button class="primary-button full-width" type="submit">
+              Iniciar sesion
+            </button>
+          </form>
+
+          <form id="register-customer-form" class="checkout-form hidden">
+            <label class="input-wrap">
+              <span>Correo</span>
+              <input id="register-email" type="email" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Contrasena</span>
+              <input id="register-password" type="password" minlength="6" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Nombre del negocio</span>
+              <input id="register-business-name" type="text" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Nombre del cliente</span>
+              <input id="register-customer-name" type="text" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Telefono</span>
+              <input id="register-customer-phone" type="tel" required />
+            </label>
+
+            <label class="input-wrap">
+              <span>Direccion</span>
+              <textarea id="register-customer-address" rows="3" required></textarea>
+            </label>
+
+            <button class="primary-button full-width" type="submit">
+              Crear cuenta
+            </button>
+          </form>
+        </div>
+
+        <div id="account-user-view" class="checkout-form hidden">
+          <div class="account-user-card">
+            <strong id="account-user-name">Cliente</strong>
+            <span id="account-user-email" class="helper-text"></span>
+            <span id="account-user-business" class="helper-text"></span>
+            <span id="account-user-phone" class="helper-text"></span>
+            <span id="account-user-address" class="helper-text"></span>
+          </div>
+
+          <button id="use-account-data-btn" class="primary-button full-width" type="button">
+            Usar mis datos en el carrito
+          </button>
+          <button id="logout-customer-btn" class="secondary-button full-width" type="button">
+            Cerrar sesion
+          </button>
+        </div>
+
+        <p id="account-status" class="helper-text">
+          Registra tu cuenta para llenar el carrito mas rapido.
+        </p>
+      </div>
+    </aside>
+
+    <aside id="cart-panel" class="cart-panel" aria-hidden="true">
+      <div class="cart-backdrop" data-close-cart="true"></div>
+      <div class="cart-drawer glass-panel">
+        <div class="cart-header">
+          <div>
+            <p class="section-label">Resumen</p>
+            <h2>Tu carrito</h2>
+          </div>
+          <button id="close-cart-btn" class="icon-button" type="button">
+            X
+          </button>
+        </div>
+
+        <div id="cart-items" class="cart-items"></div>
+
+        <div class="cart-summary">
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <strong id="cart-subtotal">$0.00</strong>
+          </div>
+          <div class="summary-row">
+            <span>Items</span>
+            <strong id="cart-items-count">0</strong>
+          </div>
+        </div>
+
+        <form id="checkout-form" class="checkout-form">
+          <label class="input-wrap">
+            <span>Nombre del negocio</span>
+            <input
+              id="business-name"
+              type="text"
+              placeholder="Ej: Colmado Lopez"
+              required
+            />
+          </label>
+
+          <label class="input-wrap">
+            <span>Nombre del cliente</span>
+            <input id="customer-name" type="text" required />
+          </label>
+
+          <label class="input-wrap">
+            <span>Telefono del cliente</span>
+            <input
+              id="customer-phone"
+              type="tel"
+              placeholder="8090000000"
+              required
+            />
+          </label>
+
+          <label class="input-wrap">
+            <span>Direccion o referencia</span>
+            <textarea id="customer-address" rows="3" required></textarea>
+          </label>
+
+          <label class="input-wrap">
+            <span>Nota del pedido</span>
+            <textarea
+              id="customer-note"
+              rows="2"
+              placeholder="Opcional: color, talla, instrucciones, etc."
+            ></textarea>
+          </label>
+
+          <button id="checkout-btn" class="primary-button full-width" type="submit">
+            Facturar
+          </button>
+        </form>
+      </div>
+    </aside>
+
+    <script type="module" src="./app.js?v=20260503-1"></script>
+  </body>
+</html>
