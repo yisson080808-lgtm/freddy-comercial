@@ -89,6 +89,19 @@ document
     closeAccount();
     showToast("Datos cargados en el carrito");
   });
+elements.catalogGrid?.addEventListener("change", (event) => {
+  const sizeSelect = event.target.closest(".size-select");
+  if (!sizeSelect) {
+    return;
+  }
+
+  const card = sizeSelect.closest(".product-card");
+  const productId = card?.dataset.productId;
+  if (productId) {
+    state.selectedSizes[productId] = sizeSelect.value;
+  }
+});
+
 elements.catalogGrid?.addEventListener("click", (event) => {
   const quantityButton = event.target.closest(".quantity-btn");
   if (quantityButton) {
@@ -103,16 +116,6 @@ elements.catalogGrid?.addEventListener("click", (event) => {
       quantityButton.dataset.action === "increase-card" ? 1 : -1;
     state.selectedQuantities[productId] = Math.max(1, currentQuantity + delta);
     updateCardQuantity(productId);
-    return;
-  }
-
-  const sizeSelect = event.target.closest(".size-select");
-  if (sizeSelect) {
-    const card = sizeSelect.closest(".product-card");
-    const productId = card?.dataset.productId;
-    if (productId) {
-      state.selectedSizes[productId] = sizeSelect.value;
-    }
     return;
   }
 
@@ -757,6 +760,14 @@ function getSelectedSize(product) {
   const sizes = Array.isArray(product.sizes) ? product.sizes : [];
   if (!sizes.length) {
     return "";
+  }
+
+  const liveSelect = elements.catalogGrid?.querySelector(
+    `.product-card[data-product-id="${CSS.escape(product.id)}"] .size-select`,
+  );
+  if (liveSelect && sizes.includes(liveSelect.value)) {
+    state.selectedSizes[product.id] = liveSelect.value;
+    return liveSelect.value;
   }
 
   const selected = state.selectedSizes[product.id];
