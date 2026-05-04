@@ -186,6 +186,13 @@ h3 {
   backdrop-filter: blur(16px);
 }
 
+body.cart-open #open-cart-btn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(18px);
+}
+
 .chip-button,
 .primary-button,
 .secondary-button {

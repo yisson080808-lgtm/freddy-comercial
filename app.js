@@ -8,7 +8,7 @@ import {
   settings,
   subscribeToProducts,
   watchAuthState,
-} from "./firebase.js?v=20260503-1";
+} from "./firebase.js?v=20260503-3";
 
 const state = {
   products: [],
@@ -394,7 +394,6 @@ async function checkoutOnWhatsApp() {
   const customerName = document.querySelector("#customer-name").value.trim();
   const customerPhone = document.querySelector("#customer-phone").value.trim();
   const customerAddress = document.querySelector("#customer-address").value.trim();
-  const customerNote = document.querySelector("#customer-note").value.trim();
   const businessName = document.querySelector("#business-name").value.trim();
 
   if (!businessName || !customerName || !customerPhone || !customerAddress) {
@@ -402,46 +401,56 @@ async function checkoutOnWhatsApp() {
     return;
   }
 
-  const orderId = await createOrder({
-    businessName,
-    customerName,
-    customerPhone,
-    customerAddress,
-    customerNote,
-    storeName: settings.storeName,
-    total: cartTotal(),
-    currency: settings.currency,
-    items: state.cart.map((item) => ({
-      id: item.id,
-      name: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      lineTotal: item.price * item.quantity,
-    })),
-    source: isLocalMode ? "local-preview" : "firebase-storefront",
-  });
+  const pendingWindow = window.open("about:blank", "_blank");
 
-  const invoiceLines = [
-    `Factura de pedido - ${settings.storeName}`,
-    `Pedido: ${orderId}`,
-    `Negocio: ${businessName}`,
-    `Cliente: ${customerName}`,
-    `Telefono del cliente: ${customerPhone}`,
-    `Direccion: ${customerAddress}`,
-    ...(customerNote ? [`Nota: ${customerNote}`] : []),
-    "",
-    "Productos:",
-    ...state.cart.map(
-      (item) =>
-        `- ${item.name} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
-    ),
-    "",
-    `Total: ${formatCurrency(cartTotal())}`,
-  ];
+  try {
+    const orderId = await createOrder({
+      businessName,
+      customerName,
+      customerPhone,
+      customerAddress,
+      storeName: settings.storeName,
+      total: cartTotal(),
+      currency: settings.currency,
+      items: state.cart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        lineTotal: item.price * item.quantity,
+      })),
+      source: isLocalMode ? "local-preview" : "firebase-storefront",
+    });
 
-  const message = encodeURIComponent(invoiceLines.join("\n"));
-  const url = `https://wa.me/${settings.whatsappNumber}?text=${message}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+    const invoiceLines = [
+      `Factura de pedido - ${settings.storeName}`,
+      `Pedido: ${orderId}`,
+      `Negocio: ${businessName}`,
+      `Cliente: ${customerName}`,
+      `Telefono del cliente: ${customerPhone}`,
+      `Direccion: ${customerAddress}`,
+      "",
+      "Productos:",
+      ...state.cart.map(
+        (item) =>
+          `- ${item.name} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
+      ),
+      "",
+      `Total: ${formatCurrency(cartTotal())}`,
+    ];
+
+    const message = encodeURIComponent(invoiceLines.join("\n"));
+    const url = `https://wa.me/${settings.whatsappNumber}?text=${message}`;
+
+    if (pendingWindow) {
+      pendingWindow.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (error) {
+    pendingWindow?.close();
+    throw error;
+  }
 }
 
 function cartTotal() {
@@ -462,6 +471,7 @@ function closeAccount() {
 function openCart() {
   elements.cartPanel.classList.add("is-open");
   elements.cartPanel.setAttribute("aria-hidden", "false");
+  document.body.classList.add("cart-open");
 }
 
 function openImageViewer(product) {
@@ -491,6 +501,7 @@ function closeImageViewer() {
 function closeCart() {
   elements.cartPanel.classList.remove("is-open");
   elements.cartPanel.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("cart-open");
 }
 
 function showToast(message) {
