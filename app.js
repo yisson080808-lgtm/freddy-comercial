@@ -136,7 +136,8 @@ elements.catalogGrid?.addEventListener("click", (event) => {
   }
 
   const productId = button.dataset.productId;
-  addToCart(productId);
+  const card = button.closest(".product-card");
+  addToCart(productId, card);
 });
 
 elements.searchInput?.addEventListener("input", (event) => {
@@ -307,7 +308,7 @@ function renderCategories() {
     : "all";
 }
 
-function addToCart(productId) {
+function addToCart(productId, card) {
   if (!productId) {
     alert("No se pudo identificar este producto.");
     return;
@@ -319,10 +320,10 @@ function addToCart(productId) {
     return;
   }
 
-  const selectedSize = getSelectedSize(product);
+  const selectedSize = getSelectedSize(product, card);
   const cartKey = buildCartKey(product.id, selectedSize);
   const existingItem = state.cart.find((item) => item.cartKey === cartKey);
-  const selectedQuantity = state.selectedQuantities[productId] || 1;
+  const selectedQuantity = getSelectedQuantity(productId, card);
 
   if (existingItem) {
     existingItem.quantity += selectedQuantity;
@@ -756,15 +757,17 @@ function renderSizeSelector(product, wrap, select) {
   select.value = activeSize;
 }
 
-function getSelectedSize(product) {
+function getSelectedSize(product, card) {
   const sizes = Array.isArray(product.sizes) ? product.sizes : [];
   if (!sizes.length) {
     return "";
   }
 
-  const liveSelect = elements.catalogGrid?.querySelector(
-    `.product-card[data-product-id="${CSS.escape(product.id)}"] .size-select`,
-  );
+  const liveSelect =
+    card?.querySelector(".size-select") ||
+    elements.catalogGrid?.querySelector(
+      `.product-card[data-product-id="${CSS.escape(product.id)}"] .size-select`,
+    );
   if (liveSelect && sizes.includes(liveSelect.value)) {
     state.selectedSizes[product.id] = liveSelect.value;
     return liveSelect.value;
@@ -772,6 +775,17 @@ function getSelectedSize(product) {
 
   const selected = state.selectedSizes[product.id];
   return sizes.includes(selected) ? selected : sizes[0];
+}
+
+function getSelectedQuantity(productId, card) {
+  const liveQuantity = card?.querySelector(".card-quantity")?.textContent;
+  const parsedQuantity = Number(liveQuantity);
+  if (Number.isFinite(parsedQuantity) && parsedQuantity > 0) {
+    state.selectedQuantities[productId] = parsedQuantity;
+    return parsedQuantity;
+  }
+
+  return state.selectedQuantities[productId] || 1;
 }
 
 function updateCardQuantity(productId) {
