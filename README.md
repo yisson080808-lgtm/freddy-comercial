@@ -22,6 +22,7 @@ Tienda web estatica estilo marketplace con:
 - `firebase-config.example.js`: ejemplo de configuracion
 - `favicon.svg`: icono de la tienda
 - `site.webmanifest`: instalacion basica como web app
+- `images/products/`: carpeta para fotos de productos en GitHub Pages
 
 ## Base de datos recomendada
 
@@ -170,6 +171,26 @@ Muy facil para arrastrar y publicar.
 ### Opcion 3: Firebase Hosting
 
 Buena opcion si quieres todo dentro de Firebase.
+
+## Usar una carpeta local de imagenes
+
+Si no quieres depender de Firebase Storage, puedes guardar las fotos dentro de:
+
+`images/products/`
+
+Luego en el panel admin pegas la ruta asi:
+
+`./images/products/mi-producto.jpg`
+
+### Como subir imagenes desde GitHub
+
+1. Entra a tu repositorio en GitHub.
+2. Abre la carpeta `images/products`.
+3. Dale a `Add file`.
+4. Luego a `Upload files`.
+5. Sube la foto.
+6. Usa en el admin una ruta como:
+   `./images/products/nombre-de-tu-foto.jpg`
 
 ## Nota importante
 

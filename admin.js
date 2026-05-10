@@ -9,7 +9,7 @@ import {
   uploadProductImage,
   upsertProduct,
   watchAuthState,
-} from "./firebase.js?v=20260504-2";
+} from "./firebase.js?v=20260510-1";
 import { demoProducts } from "./demo-products.js";
 
 const authPanel = document.querySelector(".auth-panel");
