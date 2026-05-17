@@ -91,6 +91,10 @@ productForm?.addEventListener("submit", async (event) => {
     await upsertProduct(productId, {
       name: document.querySelector("#product-name").value.trim(),
       price: Number(document.querySelector("#product-price").value),
+      minOrderQuantity: Math.max(
+        1,
+        Number(document.querySelector("#product-min-quantity").value) || 1,
+      ),
       stock: 9999,
       category: document.querySelector("#product-category").value.trim(),
       description: document.querySelector("#product-description").value.trim(),
@@ -158,6 +162,7 @@ function renderAdminProducts() {
       <img src="${product.imageUrl || fallbackImage(product.name)}" alt="${product.name}" />
       <h3>${product.name}</h3>
       <p class="admin-item-meta">${product.category}</p>
+      <p class="helper-text">Minimo por compra: ${Math.max(1, Number(product.minOrderQuantity) || 1)}</p>
       ${product.flavors?.length ? `<p class="helper-text">Sabores: ${product.flavors.join(", ")}</p>` : ""}
       ${product.sizes?.length ? `<p class="helper-text">Tallas: ${product.sizes.join(", ")}</p>` : ""}
       <p>${product.description}</p>
@@ -189,6 +194,10 @@ function populateForm(product) {
   document.querySelector("#product-id").value = product.id;
   document.querySelector("#product-name").value = product.name;
   document.querySelector("#product-price").value = product.price;
+  document.querySelector("#product-min-quantity").value = Math.max(
+    1,
+    Number(product.minOrderQuantity) || 1,
+  );
   document.querySelector("#product-category").value = product.category;
   document.querySelector("#product-description").value = product.description;
   document.querySelector("#product-sizes").value = (product.sizes || []).join(", ");

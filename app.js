@@ -132,9 +132,14 @@ elements.catalogGrid?.addEventListener("click", (event) => {
     }
 
     const currentQuantity = state.selectedQuantities[productId] || 1;
+    const product = state.products.find((item) => item.id === productId);
+    const minimumQuantity = getMinimumQuantity(product);
     const delta =
       quantityButton.dataset.action === "increase-card" ? 1 : -1;
-    state.selectedQuantities[productId] = Math.max(1, currentQuantity + delta);
+    state.selectedQuantities[productId] = Math.max(
+      minimumQuantity,
+      currentQuantity + delta,
+    );
     updateCardQuantity(productId);
     return;
   }
@@ -301,7 +306,13 @@ function renderProducts() {
     price.textContent = formatCurrency(product.price);
     button.dataset.productId = product.id;
     zoomButton.setAttribute("aria-label", `Ver imagen de ${product.name}`);
-    quantity.textContent = String(state.selectedQuantities[product.id] || 1);
+    const minimumQuantity = getMinimumQuantity(product);
+    const activeQuantity = Math.max(
+      minimumQuantity,
+      Number(state.selectedQuantities[product.id]) || minimumQuantity,
+    );
+    state.selectedQuantities[product.id] = activeQuantity;
+    quantity.textContent = String(activeQuantity);
     renderFlavorSelector(product, flavorSelectWrap, flavorSelect);
     renderSizeSelector(product, sizeSelectWrap, sizeSelect);
 
@@ -374,8 +385,9 @@ function updateQuantity(cartKey, delta) {
     return;
   }
 
-  item.quantity = Math.max(0, item.quantity + delta);
-  state.cart = state.cart.filter((entry) => entry.quantity > 0);
+  const product = state.products.find((entry) => entry.id === item.id);
+  const minimumQuantity = getMinimumQuantity(product);
+  item.quantity = Math.max(minimumQuantity, item.quantity + delta);
   persistCart();
   renderCart();
 }
@@ -706,7 +718,10 @@ function syncCartWithProducts() {
         imageUrl: product.imageUrl || fallbackImage(product.name),
         flavor: validFlavor,
         size: validSize,
-        quantity: Math.max(1, Number(item.quantity) || 1),
+        quantity: Math.max(
+          getMinimumQuantity(product),
+          Number(item.quantity) || getMinimumQuantity(product),
+        ),
       };
     })
     .filter(Boolean);
@@ -859,12 +874,14 @@ function getSelectedSize(product, card) {
 function getSelectedQuantity(productId, card) {
   const liveQuantity = card?.querySelector(".card-quantity")?.textContent;
   const parsedQuantity = Number(liveQuantity);
+  const product = state.products.find((item) => item.id === productId);
+  const minimumQuantity = getMinimumQuantity(product);
   if (Number.isFinite(parsedQuantity) && parsedQuantity > 0) {
-    state.selectedQuantities[productId] = parsedQuantity;
-    return parsedQuantity;
+    state.selectedQuantities[productId] = Math.max(minimumQuantity, parsedQuantity);
+    return state.selectedQuantities[productId];
   }
 
-  return state.selectedQuantities[productId] || 1;
+  return Math.max(minimumQuantity, state.selectedQuantities[productId] || minimumQuantity);
 }
 
 function updateCardQuantity(productId) {
@@ -873,7 +890,14 @@ function updateCardQuantity(productId) {
   );
   const quantityLabel = card?.querySelector(".card-quantity");
   if (quantityLabel) {
-    quantityLabel.textContent = String(state.selectedQuantities[productId] || 1);
+    const product = state.products.find((item) => item.id === productId);
+    const minimumQuantity = getMinimumQuantity(product);
+    const nextQuantity = Math.max(
+      minimumQuantity,
+      Number(state.selectedQuantities[productId]) || minimumQuantity,
+    );
+    state.selectedQuantities[productId] = nextQuantity;
+    quantityLabel.textContent = String(nextQuantity);
   }
 }
 
@@ -885,11 +909,16 @@ function normalizeProduct(product) {
     description: String(product.description || ""),
     category: String(product.category || "General"),
     price: Number(product.price) || 0,
+    minOrderQuantity: Math.max(1, Number(product.minOrderQuantity) || 1),
     stock: Number(product.stock) || 0,
     imageUrl: typeof product.imageUrl === "string" ? product.imageUrl.trim() : "",
     flavors: normalizeFlavors(product.flavors),
     sizes: normalizeSizes(product.sizes),
   };
+}
+
+function getMinimumQuantity(product) {
+  return Math.max(1, Number(product?.minOrderQuantity) || 1);
 }
 
 function normalizeFlavors(value) {

@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260516-2" />
+    <link rel="stylesheet" href="./styles.css?v=20260516-3" />
   </head>
   <body data-page="admin">
     <div class="page-shell admin-shell">
@@ -88,6 +88,18 @@
             </label>
 
             <label class="input-wrap">
+              <span>Minimo por compra</span>
+              <input
+                id="product-min-quantity"
+                type="number"
+                min="1"
+                step="1"
+                value="1"
+                required
+              />
+            </label>
+
+            <label class="input-wrap">
               <span>Categoria</span>
               <input id="product-category" type="text" placeholder="Tecnologia, Hogar..." required />
             </label>
@@ -147,6 +159,6 @@
       </main>
     </div>
 
-    <script type="module" src="./admin.js?v=20260516-2"></script>
+    <script type="module" src="./admin.js?v=20260516-3"></script>
   </body>
 </html>
