@@ -4,17 +4,19 @@ import {
   isLocalMode,
   loginCustomer,
   logoutCustomer,
+  recordStoreVisit,
   registerCustomer,
   settings,
   subscribeToProducts,
   watchAuthState,
-} from "./firebase.js?v=20260504-3";
+} from "./firebase.js?v=20260516-2";
 
 const state = {
   products: [],
   cart: loadCart(),
   customer: null,
   selectedQuantities: {},
+  selectedFlavors: {},
   selectedSizes: {},
   filters: {
     search: "",
@@ -90,6 +92,16 @@ document
     showToast("Datos cargados en el carrito");
   });
 elements.catalogGrid?.addEventListener("change", (event) => {
+  const flavorSelect = event.target.closest(".flavor-select");
+  if (flavorSelect) {
+    const card = flavorSelect.closest(".product-card");
+    const productId = card?.dataset.productId;
+    if (productId) {
+      state.selectedFlavors[productId] = flavorSelect.value;
+    }
+    return;
+  }
+
   const sizeSelect = event.target.closest(".size-select");
   if (!sizeSelect) {
     return;
@@ -101,6 +113,14 @@ elements.catalogGrid?.addEventListener("change", (event) => {
     state.selectedSizes[productId] = sizeSelect.value;
   }
 });
+
+if (!sessionStorage.getItem("fc-visit-recorded")) {
+  recordStoreVisit()
+    .then(() => {
+      sessionStorage.setItem("fc-visit-recorded", "1");
+    })
+    .catch(() => {});
+}
 
 elements.catalogGrid?.addEventListener("click", (event) => {
   const quantityButton = event.target.closest(".quantity-btn");
@@ -263,6 +283,8 @@ function renderProducts() {
     const price = fragment.querySelector(".product-price");
     const button = fragment.querySelector(".add-to-cart-btn");
     const quantity = fragment.querySelector(".card-quantity");
+    const flavorSelectWrap = fragment.querySelector(".flavor-select-wrap");
+    const flavorSelect = fragment.querySelector(".flavor-select");
     const sizeSelectWrap = fragment.querySelector(".size-select-wrap");
     const sizeSelect = fragment.querySelector(".size-select");
 
@@ -280,6 +302,7 @@ function renderProducts() {
     button.dataset.productId = product.id;
     zoomButton.setAttribute("aria-label", `Ver imagen de ${product.name}`);
     quantity.textContent = String(state.selectedQuantities[product.id] || 1);
+    renderFlavorSelector(product, flavorSelectWrap, flavorSelect);
     renderSizeSelector(product, sizeSelectWrap, sizeSelect);
 
     elements.catalogGrid.appendChild(fragment);
@@ -320,8 +343,9 @@ function addToCart(productId, card) {
     return;
   }
 
+  const selectedFlavor = getSelectedFlavor(product, card);
   const selectedSize = getSelectedSize(product, card);
-  const cartKey = buildCartKey(product.id, selectedSize);
+  const cartKey = buildCartKey(product.id, selectedSize, selectedFlavor);
   const existingItem = state.cart.find((item) => item.cartKey === cartKey);
   const selectedQuantity = getSelectedQuantity(productId, card);
 
@@ -332,6 +356,7 @@ function addToCart(productId, card) {
       cartKey,
       id: product.id,
       name: product.name,
+      flavor: selectedFlavor,
       size: selectedSize,
       price: Number(product.price) || 0,
       quantity: selectedQuantity,
@@ -377,6 +402,7 @@ function renderCart() {
         <img src="${imageUrl}" alt="${item.name}" />
         <div>
           <strong>${item.name}</strong>
+          ${item.flavor ? `<div class="helper-text">Sabor: ${item.flavor}</div>` : ""}
           ${item.size ? `<div class="helper-text">Talla: ${item.size}</div>` : ""}
           <div class="helper-text">${formatCurrency(item.price)}</div>
           <div class="cart-item-controls">
@@ -451,6 +477,7 @@ async function checkoutOnWhatsApp() {
       items: state.cart.map((item) => ({
         id: item.id,
         name: item.name,
+        flavor: item.flavor || "",
         size: item.size || "",
         price: item.price,
         quantity: item.quantity,
@@ -476,7 +503,7 @@ async function checkoutOnWhatsApp() {
       "Productos:",
       ...state.cart.map(
         (item) =>
-          `- ${item.name}${item.size ? ` | Talla: ${item.size}` : ""} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
+          `- ${item.name}${item.flavor ? ` | Sabor: ${item.flavor}` : ""}${item.size ? ` | Talla: ${item.size}` : ""} | Cantidad: ${item.quantity} | Total: ${formatCurrency(item.price * item.quantity)}`,
       ),
       "",
       `Total: ${formatCurrency(cartTotal())}`,
@@ -631,6 +658,7 @@ function persistCart() {
       cartKey: item.cartKey,
       id: item.id,
       name: item.name,
+      flavor: item.flavor || "",
       size: item.size || "",
       price: item.price,
       quantity: item.quantity,
@@ -644,9 +672,10 @@ function persistCart() {
 function loadCart() {
   try {
     return (JSON.parse(localStorage.getItem("fc-cart")) || []).map((item) => ({
-      cartKey: String(item.cartKey || buildCartKey(item.id, item.size || "")),
+      cartKey: String(item.cartKey || buildCartKey(item.id, item.size || "", item.flavor || "")),
       id: String(item.id),
       name: String(item.name || "Producto"),
+      flavor: String(item.flavor || ""),
       size: String(item.size || ""),
       price: Number(item.price) || 0,
       quantity: Math.max(1, Number(item.quantity) || 1),
@@ -666,14 +695,16 @@ function syncCartWithProducts() {
         return null;
       }
 
+      const validFlavor = keepValidFlavor(product, item.flavor);
       const validSize = keepValidSize(product, item.size);
 
       return {
         ...item,
-        cartKey: buildCartKey(item.id, validSize),
+        cartKey: buildCartKey(item.id, validSize, validFlavor),
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl || fallbackImage(product.name),
+        flavor: validFlavor,
         size: validSize,
         quantity: Math.max(1, Number(item.quantity) || 1),
       };
@@ -757,6 +788,54 @@ function renderSizeSelector(product, wrap, select) {
   select.value = activeSize;
 }
 
+function renderFlavorSelector(product, wrap, select) {
+  const flavors = Array.isArray(product.flavors) ? product.flavors : [];
+  if (!wrap || !select) {
+    return;
+  }
+
+  if (!flavors.length) {
+    wrap.classList.add("hidden");
+    select.innerHTML = "";
+    return;
+  }
+
+  wrap.classList.remove("hidden");
+  select.innerHTML = "";
+
+  flavors.forEach((flavor) => {
+    const option = document.createElement("option");
+    option.value = flavor;
+    option.textContent = flavor;
+    select.appendChild(option);
+  });
+
+  const selected = state.selectedFlavors[product.id];
+  const activeFlavor = flavors.includes(selected) ? selected : flavors[0];
+  state.selectedFlavors[product.id] = activeFlavor;
+  select.value = activeFlavor;
+}
+
+function getSelectedFlavor(product, card) {
+  const flavors = Array.isArray(product.flavors) ? product.flavors : [];
+  if (!flavors.length) {
+    return "";
+  }
+
+  const liveSelect =
+    card?.querySelector(".flavor-select") ||
+    elements.catalogGrid?.querySelector(
+      `.product-card[data-product-id="${CSS.escape(product.id)}"] .flavor-select`,
+    );
+  if (liveSelect && flavors.includes(liveSelect.value)) {
+    state.selectedFlavors[product.id] = liveSelect.value;
+    return liveSelect.value;
+  }
+
+  const selected = state.selectedFlavors[product.id];
+  return flavors.includes(selected) ? selected : flavors[0];
+}
+
 function getSelectedSize(product, card) {
   const sizes = Array.isArray(product.sizes) ? product.sizes : [];
   if (!sizes.length) {
@@ -808,8 +887,26 @@ function normalizeProduct(product) {
     price: Number(product.price) || 0,
     stock: Number(product.stock) || 0,
     imageUrl: typeof product.imageUrl === "string" ? product.imageUrl.trim() : "",
+    flavors: normalizeFlavors(product.flavors),
     sizes: normalizeSizes(product.sizes),
   };
+}
+
+function normalizeFlavors(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((flavor) => String(flavor).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((flavor) => flavor.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
 function normalizeSizes(value) {
@@ -838,8 +935,17 @@ function keepValidSize(product, currentSize) {
   return sizes.includes(currentSize) ? currentSize : sizes[0];
 }
 
-function buildCartKey(productId, size) {
-  return `${String(productId)}::${String(size || "standard")}`;
+function keepValidFlavor(product, currentFlavor) {
+  const flavors = Array.isArray(product.flavors) ? product.flavors : [];
+  if (!flavors.length) {
+    return "";
+  }
+
+  return flavors.includes(currentFlavor) ? currentFlavor : flavors[0];
+}
+
+function buildCartKey(productId, size, flavor) {
+  return `${String(productId)}::${String(size || "standard")}::${String(flavor || "default")}`;
 }
 
 function safeImageUrl(value, label) {

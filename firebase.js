@@ -11,6 +11,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  increment,
   getDocs,
   getDoc,
   getFirestore,
@@ -49,6 +50,7 @@ let storage = null;
 let productsCollection = null;
 let ordersCollection = null;
 let customersCollection = null;
+let statsDoc = null;
 
 if (!useLocalMode) {
   const app = initializeApp(firebaseConfig);
@@ -58,9 +60,10 @@ if (!useLocalMode) {
   productsCollection = collection(db, "products");
   ordersCollection = collection(db, "orders");
   customersCollection = collection(db, "customers");
+  statsDoc = doc(db, "stats", "storefront");
 }
 
-export { auth, db, storage, productsCollection, ordersCollection, customersCollection };
+export { auth, db, storage, productsCollection, ordersCollection, customersCollection, statsDoc };
 export const isLocalMode = useLocalMode;
 
 if (useLocalMode) {
@@ -253,6 +256,7 @@ export async function createOrder(order) {
       createdAt: new Date().toISOString(),
     });
     localStorage.setItem("fc-local-orders", JSON.stringify(orders));
+    await bumpLocalStats("purchases");
     return orders[0].id;
   }
 
@@ -260,6 +264,14 @@ export async function createOrder(order) {
     ...order,
     createdAt: serverTimestamp(),
   });
+  await setDoc(
+    statsDoc,
+    {
+      purchases: increment(1),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
   return created.id;
 }
 
@@ -302,6 +314,33 @@ export async function getCustomerProfile(userId) {
 
   const customerDoc = await getDoc(doc(db, "customers", userId));
   return customerDoc.exists() ? customerDoc.data() : null;
+}
+
+export async function recordStoreVisit() {
+  if (useLocalMode) {
+    await bumpLocalStats("visits");
+    return;
+  }
+
+  await setDoc(
+    statsDoc,
+    {
+      visits: increment(1),
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
+}
+
+export function subscribeToStoreStats(callback) {
+  if (useLocalMode) {
+    callback(loadLocalStats());
+    return () => {};
+  }
+
+  return onSnapshot(statsDoc, (snapshot) => {
+    callback(snapshot.exists() ? snapshot.data() : { visits: 0, purchases: 0 });
+  });
 }
 
 async function getLocalProducts() {
@@ -362,6 +401,31 @@ function loadLocalOrders() {
   } catch {
     return [];
   }
+}
+
+function loadLocalStats() {
+  try {
+    return JSON.parse(localStorage.getItem("fc-local-stats")) || {
+      visits: 0,
+      purchases: 0,
+    };
+  } catch {
+    return {
+      visits: 0,
+      purchases: 0,
+    };
+  }
+}
+
+async function bumpLocalStats(field) {
+  const current = loadLocalStats();
+  const nextValue = Number(current[field] || 0) + 1;
+  const updated = {
+    ...current,
+    [field]: nextValue,
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem("fc-local-stats", JSON.stringify(updated));
 }
 
 function notifyAuth() {

@@ -466,19 +466,22 @@ h1 {
   justify-items: end;
 }
 
-.size-select-wrap {
+.variant-select-wrap {
   width: 100%;
   display: grid;
   gap: 8px;
 }
 
-.size-select-wrap span {
+.variant-select-wrap span {
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.size-select-wrap span {
   text-align: right;
 }
 
-.size-select {
+.variant-select {
   width: 100%;
   min-width: 132px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -489,7 +492,7 @@ h1 {
   outline: none;
 }
 
-.size-select:focus {
+.variant-select:focus {
   border-color: rgba(91, 242, 255, 0.42);
   box-shadow: 0 0 0 3px rgba(91, 242, 255, 0.12);
 }
@@ -773,6 +776,31 @@ h1 {
   margin-top: 28px;
 }
 
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 22px 0 26px;
+}
+
+.stat-card {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-card strong {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.stat-card small {
+  color: var(--muted);
+}
+
 .admin-item img {
   width: 100%;
   aspect-ratio: 4 / 3;
@@ -915,7 +943,7 @@ h1 {
     justify-items: stretch;
   }
 
-  .size-select-wrap span {
+  .variant-select-wrap span {
     text-align: left;
   }
 
@@ -1014,5 +1042,9 @@ h1 {
 
   .chip-badge {
     margin-left: 0;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
   }
 }

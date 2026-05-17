@@ -6,10 +6,11 @@ import {
   seedProducts,
   settings,
   subscribeToProducts,
+  subscribeToStoreStats,
   uploadProductImage,
   upsertProduct,
   watchAuthState,
-} from "./firebase.js?v=20260510-1";
+} from "./firebase.js?v=20260516-2";
 import { demoProducts } from "./demo-products.js";
 
 const authPanel = document.querySelector(".auth-panel");
@@ -19,6 +20,8 @@ const loginForm = document.querySelector("#login-form");
 const loginButton = document.querySelector("#login-btn");
 const productForm = document.querySelector("#product-form");
 const productsList = document.querySelector("#admin-products-list");
+const visitsCount = document.querySelector("#admin-visits-count");
+const purchasesCount = document.querySelector("#admin-purchases-count");
 
 let products = [];
 
@@ -92,6 +95,7 @@ productForm?.addEventListener("submit", async (event) => {
       category: document.querySelector("#product-category").value.trim(),
       description: document.querySelector("#product-description").value.trim(),
       sizes: parseSizes(document.querySelector("#product-sizes").value),
+      flavors: parseVariantValues(document.querySelector("#product-flavors").value),
       imageUrl,
       storeName: settings.storeName,
     });
@@ -133,6 +137,11 @@ subscribeToProducts((items) => {
   renderAdminProducts();
 });
 
+subscribeToStoreStats((stats) => {
+  visitsCount.textContent = String(Number(stats?.visits) || 0);
+  purchasesCount.textContent = String(Number(stats?.purchases) || 0);
+});
+
 function renderAdminProducts() {
   productsList.innerHTML = "";
 
@@ -149,6 +158,7 @@ function renderAdminProducts() {
       <img src="${product.imageUrl || fallbackImage(product.name)}" alt="${product.name}" />
       <h3>${product.name}</h3>
       <p class="admin-item-meta">${product.category}</p>
+      ${product.flavors?.length ? `<p class="helper-text">Sabores: ${product.flavors.join(", ")}</p>` : ""}
       ${product.sizes?.length ? `<p class="helper-text">Tallas: ${product.sizes.join(", ")}</p>` : ""}
       <p>${product.description}</p>
       <strong>${formatCurrency(product.price)}</strong>
@@ -182,14 +192,19 @@ function populateForm(product) {
   document.querySelector("#product-category").value = product.category;
   document.querySelector("#product-description").value = product.description;
   document.querySelector("#product-sizes").value = (product.sizes || []).join(", ");
+  document.querySelector("#product-flavors").value = (product.flavors || []).join(", ");
   document.querySelector("#product-image-url").value = product.imageUrl || "";
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function parseSizes(value) {
+  return parseVariantValues(value);
+}
+
+function parseVariantValues(value) {
   return String(value || "")
     .split(",")
-    .map((size) => size.trim())
+    .map((item) => item.trim())
     .filter(Boolean);
 }
 

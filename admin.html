@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=20260510-1" />
+    <link rel="stylesheet" href="./styles.css?v=20260516-2" />
   </head>
   <body data-page="admin">
     <div class="page-shell admin-shell">
@@ -61,6 +61,19 @@
             </button>
           </div>
 
+          <section class="stats-grid">
+            <article class="stat-card">
+              <span class="section-label">Visitas</span>
+              <strong id="admin-visits-count">0</strong>
+              <small>Sesiones registradas en la tienda</small>
+            </article>
+            <article class="stat-card">
+              <span class="section-label">Compras</span>
+              <strong id="admin-purchases-count">0</strong>
+              <small>Pedidos facturados por WhatsApp</small>
+            </article>
+          </section>
+
           <form id="product-form" class="product-form">
             <input id="product-id" type="hidden" />
 
@@ -90,6 +103,15 @@
                 id="product-sizes"
                 type="text"
                 placeholder="Ej: 38, 39, 40, 41"
+              />
+            </label>
+
+            <label class="input-wrap">
+              <span>Sabores disponibles</span>
+              <input
+                id="product-flavors"
+                type="text"
+                placeholder="Ej: cola, naranja, uva"
               />
             </label>
 
@@ -125,6 +147,6 @@
       </main>
     </div>
 
-    <script type="module" src="./admin.js?v=20260510-1"></script>
+    <script type="module" src="./admin.js?v=20260516-2"></script>
   </body>
 </html>
